@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+const SENTRY_DNS = "http://4b27200647234ab2a00c4452df8afe1c:a879047d88e1455dbf0ea055f3826c4b@sentry.xibao100.com/3"
+
 // Run represents a number of functions running concurrently.
 type Run struct {
 	limiter chan struct{}
@@ -41,7 +43,7 @@ func (errs Errors) Error() string {
 // NewRun returns a new parallel instance.  It will run up to maxPar
 // functions concurrently.
 func NewRun(maxPar int, timeOut time.Duration) *Run {
-	sentry, _ := raven.NewClient("http://4b27200647234ab2a00c4452df8afe1c:a879047d88e1455dbf0ea055f3826c4b@sentry.xibao100.com/3")
+	sentry, _ := raven.NewClient(SENTRY_DNS)
 	r := &Run{
 		limiter: make(chan struct{}, maxPar),
 		//done: make(chan error),
