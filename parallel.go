@@ -118,8 +118,9 @@ func (r *Run) Do(f func() error) {
 				case <-time.After(r.timeOut * time.Second):
 					log.Println("TimeOut: ", r.timeOut, " sec.")
 					return
-				default:
-					time.Sleep(500 * time.Millisecond)
+					//default:
+					//runtime.Gosched()
+					//	time.Sleep(500 * time.Millisecond)
 				}
 			}
 		}
