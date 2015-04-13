@@ -5,10 +5,9 @@ package parallel
 
 import (
 	"fmt"
-	"github.com/kisielk/raven-go/raven"
+	"github.com/getsentry/raven-go"
 	"log"
 	"runtime"
-	"runtime/debug"
 	"sync"
 	"time"
 )
@@ -43,30 +42,15 @@ func (errs Errors) Error() string {
 // NewRun returns a new parallel instance.  It will run up to maxPar
 // functions concurrently.
 func NewRun(maxPar int, timeOut time.Duration) *Run {
-	sentry, _ := raven.NewClient(SENTRY_DNS)
 	r := &Run{
 		limiter: make(chan struct{}, maxPar),
-		//done: make(chan error),
-		//err: make(chan error),
-		//quit: false,
 		timeOut: timeOut,
-		sentry:  sentry,
 	}
-	/*
-	   go func() {
-	           var errs Errors
-	           for e := range r.done {
-	                   errs = append(errs, e)
-	           }
-	           // TODO sort errors by original order of Do request?
-	           if len(errs) > 0 {
-	                   r.err <- errs
-	           } else {
-	                   r.err <- nil
-	           }
-	   }()
-	*/
 	return r
+}
+
+func (r *Run) SetSentry(sentry *raven.Client) {
+	r.sentry = sentry
 }
 
 func (r *Run) Running() (int, int) {
@@ -85,31 +69,25 @@ func (r *Run) Do(f func() error) {
 			<-r.limiter
 		}()
 		if r.timeOut == 0 {
-			/*if err := f(); err != nil {
-			    if !r.quit {
-			        r.done <- err
-			    }
-			}*/
 			f()
 		} else {
 			jobDone := make(chan struct{}, 1)
 			go func() {
 				defer func() {
-					if re := recover(); re != nil {
-						log.Printf("Recover in f %v\n", re)
-						debug.PrintStack()
-						if r.sentry != nil {
-							r.sentry.CaptureMessage(string(debug.Stack()))
-						}
-					}
 					jobDone <- struct{}{}
 				}()
-				f()
-				/*if err := f(); err != nil {
-				    if !r.quit {
-				        r.done <- err
-				    }
-				}*/
+				if r.sentry != nil {
+					r.sentry.CapturePanic(func() {
+						f()
+					}, nil, nil)
+				} else {
+					defer func() {
+						if recovered := recover(); recovered != nil {
+							log.Println(recovered)
+						}
+					}()
+					f()
+				}
 			}()
 			for {
 				select {
@@ -118,9 +96,6 @@ func (r *Run) Do(f func() error) {
 				case <-time.After(r.timeOut * time.Second):
 					log.Println("TimeOut: ", r.timeOut, " sec.")
 					return
-					//default:
-					//runtime.Gosched()
-					//	time.Sleep(500 * time.Millisecond)
 				}
 			}
 		}
@@ -133,11 +108,5 @@ func (r *Run) Do(f func() error) {
 // Errors value describing all the errors in arbitrary order.
 func (r *Run) Wait() error {
 	r.wg.Wait()
-	/*
-	   if !r.quit {
-	       close(r.done)
-	   }
-	   r.quit = true
-	*/
 	return nil
 }
