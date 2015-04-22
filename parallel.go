@@ -89,11 +89,13 @@ func (r *Run) Do(f func() error) {
 					f()
 				}
 			}()
+			timeoutTimer := time.NewTimer(r.timeOut * time.Second)
+			defer timeoutTimer.Stop()
 			for {
 				select {
 				case <-jobDone:
 					return
-				case <-time.After(r.timeOut * time.Second):
+				case <-timeoutTimer.C:
 					log.Println("TimeOut: ", r.timeOut, " sec.")
 					return
 				}
