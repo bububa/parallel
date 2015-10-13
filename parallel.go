@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const SENTRY_DNS = "https://aec9a81d8cdb4027b593cd35fa2129f8:249ef73e698243afb0d544aad757d620@sentry.xibao100.com/3"
+const SENTRY_DNS = "https://013c02ca4b72422394225c7c6349f4a1:b75598ff2960482285f7f20693c2d547@sentry.xibao100.com/2"
 
 // Run represents a number of functions running concurrently.
 type Run struct {
